@@ -22,7 +22,7 @@ android {
         val groqKey = System.getenv("GROQ_API_KEY") ?: ""
         buildConfigField("String", "GROQ_API_KEY", "\"$groqKey\"")
         // Vision-capable Groq model. Change here or inside the app (Settings -> API change).
-        buildConfigField("String", "GROQ_MODEL", "\"meta-llama/llama-4-scout-17b-16e-instruct\"")
+        buildConfigField("String", "GROQ_MODEL", "\"qwen/qwen3.8-27b\"")
     }
 
     signingConfigs {

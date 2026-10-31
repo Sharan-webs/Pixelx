@@ -38,9 +38,29 @@ object Store {
         get() = sp.getString("api_key", "") ?: ""
         set(v) { sp.edit().putString("api_key", v.trim()).apply() }
 
+    /** Models Groq has shut down. A saved name from this list is ignored so old installs heal themselves. */
+    private val retiredModels = setOf(
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "llama-3.2-90b-vision-preview",
+        "llama-3.2-11b-vision-preview"
+    )
+
     var model: String
-        get() = sp.getString("model", "")?.ifBlank { null } ?: BuildConfig.GROQ_MODEL
+        get() {
+            val saved = (sp.getString("model", "") ?: "").trim()
+            return if (saved.isBlank() || saved in retiredModels) BuildConfig.GROQ_MODEL else saved
+        }
         set(v) { sp.edit().putString("model", v.trim()).apply() }
+
+    /** True once the user has passed the API / add-on page that follows the permission page. */
+    var setupDone: Boolean
+        get() = sp.getBoolean("setup_done", false)
+        set(v) { sp.edit().putBoolean("setup_done", v).apply() }
+
+    var unlimited: Boolean
+        get() = sp.getBoolean("unlimited", false)
+        set(v) { sp.edit().putBoolean("unlimited", v).apply() }
 
     fun activeKey(): String = userKey.ifBlank { BuildConfig.GROQ_API_KEY }
 
@@ -65,10 +85,26 @@ object Credits {
         return raw.split(",").mapNotNull { it.toLongOrNull() }.filter { now - it < WINDOW }.toMutableList()
     }
 
-    fun remaining(): Int = (MAX - stamps().size).coerceAtLeast(0)
+    /** SHA-256 of the add-on code, so the plain code text is not sitting in the app. */
+    private const val CODE_HASH = "850ec97f49578f48c8549ab59f036c053f8235096277385115362aba6a1ff43f"
+
+    val unlimited: Boolean get() = Store.unlimited
+
+    /** Returns true (and unlocks unlimited credits for this device) if the add-on code is right. */
+    fun redeem(code: String): Boolean {
+        val h = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(code.trim().uppercase().toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        if (h != CODE_HASH) return false
+        Store.unlimited = true
+        return true
+    }
+
+    fun remaining(): Int = if (unlimited) MAX else (MAX - stamps().size).coerceAtLeast(0)
 
     /** Milliseconds until the next credit returns (0 if one is available now). */
     fun nextRefillMs(): Long {
+        if (unlimited) return 0L
         val s = stamps()
         if (s.size < MAX) return 0L
         val oldest = s.minOrNull() ?: return 0L
@@ -76,6 +112,7 @@ object Credits {
     }
 
     fun consume() {
+        if (unlimited) return
         val s = stamps()
         s.add(System.currentTimeMillis())
         Store.sp.edit().putString("credit_stamps", s.joinToString(",")).apply()

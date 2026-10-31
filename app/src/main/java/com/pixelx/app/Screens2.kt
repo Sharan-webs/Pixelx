@@ -166,7 +166,7 @@ fun DetailsScreen(vm: AppVm) {
         PxCard(Modifier.fillMaxWidth()) {
             Column {
                 Text("This video costs 1 credit", style = ts(15, FontWeight.SemiBold))
-                Text("You have ${vm.credits} of ${Credits.MAX} credits today.", style = ts(12, color = C.Muted))
+                Text(if (Credits.unlimited) "You have unlimited credits." else "You have ${vm.credits} of ${Credits.MAX} credits today.", style = ts(12, color = C.Muted))
                 Gap(6)
                 Text("Estimated time: about ${fmtEta(Generator.estimateSeconds(vm.seconds))}", style = ts(12, color = C.Muted))
             }

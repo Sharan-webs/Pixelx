@@ -112,13 +112,24 @@ object PlanParser {
         return min(hi, max(lo, x))
     }
 
+    /** Numbers of the user's instructions that the AI itself marked as not done. */
+    fun uncovered(raw: String): List<Int> {
+        val arr = extractJson(raw)?.optJSONArray("instructions") ?: return emptyList()
+        val out = ArrayList<Int>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            if (o.has("done") && !o.optBoolean("done", true)) out.add(o.optInt("n", i + 1))
+        }
+        return out
+    }
+
     fun parse(raw: String, seconds: Int, fps: Int): ParseResult {
         val root = extractJson(raw) ?: return ParseResult(null, "The AI answer was not valid JSON.")
         val d = seconds.toFloat()
 
         val regions = ArrayList<Region>()
         val ra = root.optJSONArray("regions") ?: JSONArray()
-        for (i in 0 until min(ra.length(), 6)) {
+        for (i in 0 until min(ra.length(), 12)) {
             val o = ra.optJSONObject(i) ?: continue
             val name = o.optString("name", "").uppercase(Locale.ROOT).replace(Regex("[^A-Z0-9_]"), "_").take(24)
             if (name.isEmpty() || name in reserved) continue
@@ -132,7 +143,7 @@ object PlanParser {
 
         val anims = ArrayList<Anim>()
         val aa = root.optJSONArray("animations") ?: return ParseResult(null, "The plan has no animations.")
-        for (i in 0 until min(aa.length(), 24)) {
+        for (i in 0 until min(aa.length(), 40)) {
             val o = aa.optJSONObject(i) ?: continue
             val code = Act.byName[o.optString("action", "").uppercase(Locale.ROOT)] ?: continue
             val target = o.optString("target", "ALL").uppercase(Locale.ROOT).trim()
@@ -272,11 +283,12 @@ object LocalPlanner {
             }
         }
         if (!main) {
-            add(Anim("ALL", Act.ZOOM, 0f, d, from = 1f, to = 1.2f))
-            add(Anim("ALL", Act.TRANSLATE, 0f, d, x = 0.025f))
+            // Nothing recognised (or empty request): the smallest possible motion, nothing dramatic.
+            add(Anim("ALL", Act.ZOOM, 0f, d, from = 1f, to = if (prompt.isBlank()) 1.2f else 1.06f))
+            if (prompt.isBlank()) add(Anim("ALL", Act.TRANSLATE, 0f, d, x = 0.025f))
         }
         val used = a.any { it.target == "SUBJECT" }
-        return Plan("Built-in planner: " + (if (intents.isEmpty()) "gentle cinematic push-in" else intents.joinToString(", ").lowercase(Locale.ROOT)),
+        return Plan("Built-in planner: " + (if (intents.isEmpty()) (if (prompt.isBlank()) "gentle cinematic push-in" else "could not understand the request offline, so only a tiny push-in was applied. Add a Groq key to follow every instruction") else intents.joinToString(", ").lowercase(Locale.ROOT)),
             seconds, fps, if (used) regions else emptyList(), a, "LOCAL")
     }
 }

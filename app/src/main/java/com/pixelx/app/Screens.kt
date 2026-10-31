@@ -200,7 +200,7 @@ fun PermsScreen(vm: AppVm) {
             ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName)))
         }
         Gap(24)
-        PxButton("Start", { vm.screen = Screen.BOOT }, Modifier.fillMaxWidth(), enabled = notifOk && storageOk)
+        PxButton("Start", { vm.screen = if (Store.setupDone) Screen.BOOT else Screen.SETUP }, Modifier.fillMaxWidth(), enabled = notifOk && storageOk)
         if (!(notifOk && storageOk)) {
             Gap(10)
             Text("Allow the required permissions above to continue.", style = ts(12, color = C.Muted), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
@@ -269,7 +269,7 @@ fun HomeScreen(vm: AppVm) {
         Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) { Logo(20) }
-                Pill("⚡ ${vm.credits}/${Credits.MAX}", if (vm.credits > 0) C.Good else C.Danger)
+                Pill(if (Credits.unlimited) "⚡ ∞" else "⚡ ${vm.credits}/${Credits.MAX}", if (vm.credits > 0) C.Good else C.Danger)
                 Box(
                     Modifier.padding(start = 10.dp).size(44.dp).clip(RoundedCornerShape(14.dp)).background(C.Surface2)
                         .clickable { showSettings = true },

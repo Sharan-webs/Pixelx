@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-enum class Screen { TERMS, PERMS, BOOT, HOME, CONFIRM_IMAGE, PROMPT, DETAILS, PROCESS, RESULT, HISTORY }
+enum class Screen { TERMS, PERMS, SETUP, BOOT, HOME, CONFIRM_IMAGE, PROMPT, DETAILS, PROCESS, RESULT, HISTORY }
 
 object Perms {
     fun notif(c: Context): Boolean =
@@ -55,7 +55,7 @@ object Perms {
 
 class AppVm(app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf(
-        if (!Store.termsAccepted) Screen.TERMS else if (!Perms.requiredOk(app)) Screen.PERMS else Screen.BOOT
+        if (!Store.termsAccepted) Screen.TERMS else if (!Perms.requiredOk(app)) Screen.PERMS else if (!Store.setupDone) Screen.SETUP else Screen.BOOT
     )
     var resumeTick by mutableIntStateOf(0)
     var notifAsked by mutableStateOf(false)
@@ -179,6 +179,7 @@ fun PixelXRoot(vm: AppVm) {
             when (s) {
                 Screen.TERMS -> TermsScreen(vm)
                 Screen.PERMS -> PermsScreen(vm)
+                Screen.SETUP -> SetupScreen(vm)
                 Screen.BOOT -> BootScreen(vm)
                 Screen.HOME -> HomeScreen(vm)
                 Screen.CONFIRM_IMAGE -> ConfirmImageScreen(vm)
